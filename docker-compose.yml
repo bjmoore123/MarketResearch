@@ -1,0 +1,11 @@
+services:
+  market-intelligence:
+    build: .
+    ports:
+      - "3000:3000"
+    env_file:
+      - .env
+    volumes:
+      # Hot-reload HTML/CSS/JS without rebuilding the image
+      - ./public:/app/public
+    restart: unless-stopped
