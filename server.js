@@ -158,6 +158,66 @@ app.post('/api/dfs/scan', async (req, res) => {
   res.json({ categories: enriched });
 });
 
+
+// ─── DataForSEO — Market Pulse ────────────────────────────
+// POST /api/dfs/market-pulse
+// body: { metros:[{id,name,state}], categories:[{id,name}] }
+// One DFS call for all combos; returns volume matrix sorted by total desc.
+app.post('/api/dfs/market-pulse', async (req, res) => {
+  if (!process.env.DATAFORSEO_LOGIN)
+    return res.status(503).json({ dfs_error: true, message: 'DataForSEO not configured.' });
+
+  const { metros = [], categories = [] } = req.body;
+  if (!metros.length || !categories.length)
+    return res.status(400).json({ error: 'metros and categories arrays required' });
+
+  // Build keyword list: "best {category} in {city} {state}"
+  const combos = [];
+  metros.forEach(m => {
+    categories.forEach(c => {
+      combos.push({ metro_id: m.id, category_id: c.id,
+        keyword: `best ${c.name.toLowerCase()} in ${m.name} ${m.state}` });
+    });
+  });
+
+  // Chunk into ≤700-keyword DFS tasks
+  const CHUNK = 700;
+  const allResults = [];
+  for (let i = 0; i < combos.length; i += CHUNK) {
+    const chunk = combos.slice(i, i + CHUNK);
+    const { status, ok, data, raw } = await dfsPost(
+      '/v3/keywords_data/google_ads/search_volume/live',
+      [{ keywords: chunk.map(c => c.keyword), location_code: 2840, language_code: 'en' }]
+    );
+    if (!ok || !data) {
+      console.error('Market Pulse error:', raw || data);
+      return res.status(status).json({ dfs_error: true, message: data?.status_message || raw });
+    }
+    allResults.push(...(data.tasks?.[0]?.result || []));
+  }
+
+  // Build lookup
+  const volMap = {};
+  allResults.forEach(r => { if (r?.keyword) volMap[r.keyword.toLowerCase()] = r; });
+
+  // Assemble matrix
+  const matrix = categories.map(cat => {
+    const metroData = {};
+    let total = 0;
+    metros.forEach(m => {
+      const kw  = `best ${cat.name.toLowerCase()} in ${m.name} ${m.state}`.toLowerCase();
+      const r   = volMap[kw];
+      const vol = r?.search_volume || 0;
+      metroData[m.id] = { volume: vol, competition_index: r?.competition_index || 0, cpc: r?.cpc || 0, keyword: kw };
+      total += vol;
+    });
+    return { category: cat, metros: metroData, total_volume: total };
+  });
+
+  matrix.sort((a, b) => b.total_volume - a.total_volume);
+  res.json({ metros, categories, matrix, generated_at: new Date().toISOString() });
+});
+
 // ─── DataForSEO — Plan diagnostic ─────────────────────────
 app.get('/api/dfs/plan', async (req, res) => {
   if (!process.env.DATAFORSEO_LOGIN) return res.status(503).json({ error: 'DataForSEO not configured.' });

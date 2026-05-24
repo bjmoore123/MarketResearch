@@ -923,7 +923,7 @@ function AtlasPhase({ label, weight, score, details }) {
 }
 
 // ─── Top bar ───────────────────────────────────────────────
-function AtlasTopBar({ status }) {
+function AtlasTopBar({ status, onPulse }) {
   const s = status || {};
   const pill = (ok, label) => (
     <div style={{ display:'flex', alignItems:'center', gap:6 }}>
@@ -948,6 +948,18 @@ function AtlasTopBar({ status }) {
       <div style={{ display:'flex', alignItems:'center', gap:14 }}>
         {pill(s.anthropic, 'Claude')}
         {pill(s.dataforseo, 'DataForSEO')}
+      <div style={{ flex:1 }}/>
+      <button onClick={onPulse} style={{
+        padding:'6px 14px', borderRadius:6, border:`1px solid ${atlasTokens.ruleHi}`,
+        background: atlasTokens.cardHi, color: atlasTokens.ink2,
+        fontFamily: atlasTokens.mono, fontSize:11, cursor:'pointer',
+        letterSpacing:'0.04em', fontWeight:500,
+        transition:'background .15s',
+      }}
+        onMouseEnter={e => e.currentTarget.style.background = atlasTokens.card}
+        onMouseLeave={e => e.currentTarget.style.background = atlasTokens.cardHi}>
+        ⬡ Market Pulse
+      </button>
         <div style={{ width:1, height:18, background:atlasTokens.rule }} />
         <div style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.dim, letterSpacing:0.5 }}>
           {s.checked ? 'connected' : 'checking…'}
@@ -1275,6 +1287,7 @@ function AtlasApp() {
   atlasTokens = makeAtlasTokens(t);
 
   const [selected, setSelected] = React.useState(null);
+  const [showPulse,  setShowPulse]  = React.useState(false);
   const [nicheFilters, setNicheFilters] = React.useState({}); // { [nicheId]: 'include' | 'exclude' }
   const [quadrantFilters, setQuadrantFilters] = React.useState({}); // { [key]: true }
   const [nicheSel, setNicheSel] = React.useState(null);
@@ -1407,7 +1420,8 @@ function AtlasApp() {
       fontFamily:atlasTokens.sans, display:'flex', flexDirection:'column', position:'relative', overflow:'hidden',
       ['--atlas-density']: densityScale,
     }}>
-      <AtlasTopBar status={status} />
+      <AtlasTopBar status={status} onPulse={() => setShowPulse(true)} />
+      {showPulse && window.MarketPulse && React.createElement(window.MarketPulse, { tokens: atlasTokens, onClose: () => setShowPulse(false) })}
 
       <div style={{ flex:1, display:'flex', minHeight:0 }}>
         {/* Left rail — niche overlay */}
