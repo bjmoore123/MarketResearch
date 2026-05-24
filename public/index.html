@@ -589,6 +589,7 @@ L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
 
 const nicheOverlayGroup = L.layerGroup().addTo(map);
 let selectedMetroId = null;
+let selectedNicheId  = '';   // persists across renderMetroDetail rebuilds
 let activeNicheId = null;
 const markerMap = {}; // id → { marker, metro }
 
@@ -612,6 +613,7 @@ METROS.forEach(metro => {
 });
 
 function selectMetro(id) {
+  selectedNicheId = ''; // reset niche when switching metros
   // Deselect previous
   if (selectedMetroId && markerMap[selectedMetroId]) {
     const prev = markerMap[selectedMetroId];
@@ -760,7 +762,7 @@ function renderMetroDetail(metro) {
 
       <div>
         <div class="sec-label" style="margin-top:0">Run Deep Analysis</div>
-        <select id="nicheSelect" onchange="updateAnalyzeBtn()" style="width:100%;background:#1a1f2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#e8eaf0;font-family:monospace;font-size:12px;margin-bottom:10px;appearance:none;-webkit-appearance:none;cursor:pointer;">
+        <select id="nicheSelect" onchange="selectedNicheId=this.value;updateAnalyzeBtn()" style="width:100%;background:#1a1f2e;border:1px solid rgba(255,255,255,0.15);border-radius:8px;padding:9px 12px;color:#e8eaf0;font-family:monospace;font-size:12px;margin-bottom:10px;appearance:none;-webkit-appearance:none;cursor:pointer;">
           <option value="">— Full market scan (no niche filter) —</option>
           ${NICHE_CATS.map(cat=>`
             <optgroup label="${cat.label}">
@@ -947,18 +949,20 @@ const PHASE_META = {
 async function runAnalysis(metroId) {
   const metro = METROS.find(m => m.id === metroId);
   if (!metro) return;
-  const nicheId = document.getElementById('nicheSelect')?.value || '';
-  const niche = nicheId ? nicheById(nicheId) : null;
+  // Read from module-level variable — immune to DOM resets
+  const nicheId   = (selectedNicheId || '').trim();
+  const niche     = nicheId ? nicheById(nicheId) : null;
+  const nicheName = niche?.name || nicheId || '';
 
   showLoading(ANALYSIS_MSGS);
   closeAnalysis();
 
   try {
-    // ── Branch: full market scan vs niche deep dive ────────────────────
+    // ── Branch on nicheId (raw string), not on niche object lookup ────
     let prompt, ahrefsCtx = '';
-    if (niche) {
-      ahrefsCtx = await fetchAhrefsData(metro.name, niche.name).catch(() => '');
-      prompt = buildAnalysisPrompt(metro.name, niche.name, ahrefsCtx);
+    if (nicheId) {
+      ahrefsCtx = await fetchAhrefsData(metro.name, nicheName).catch(() => '');
+      prompt = buildAnalysisPrompt(metro.name, nicheName, ahrefsCtx);
     } else {
       prompt = buildMarketScanPrompt(metro.name);
     }
@@ -1308,6 +1312,8 @@ function tableRowClick(metroId, nicheId) {
   // Pre-select niche in the detail dropdown if it exists
   const sel = document.getElementById('nicheSelect');
   if (sel) sel.value = nicheId;
+  selectedNicheId = nicheId;
+  updateAnalyzeBtn();
 }
 
 function analyzeFromTable(metroId, nicheId) {
@@ -1316,6 +1322,8 @@ function analyzeFromTable(metroId, nicheId) {
   setTimeout(() => {
     const sel = document.getElementById('nicheSelect');
     if (sel) sel.value = nicheId;
+    selectedNicheId = nicheId;
+    updateAnalyzeBtn();
     runAnalysis(metroId);
   }, 100);
 }
