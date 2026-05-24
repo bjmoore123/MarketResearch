@@ -104,19 +104,28 @@ function useAtlasMap(containerId, { selected, setSelected, nicheFilters, quadran
     const excludes = Object.keys(filters).filter(id => filters[id] === 'exclude').map(id => all.find(n => n.id === id)).filter(Boolean);
     const qf = quadrantFilters || {};
     const anyQuadFilter = Object.values(qf).some(Boolean);
-    const anyFilter = includes.length > 0 || excludes.length > 0 || anyQuadFilter;
+    const anyNicheFilter = includes.length > 0 || excludes.length > 0;
+    const anyFilter = anyNicheFilter || anyQuadFilter;
 
     Object.entries(markersRef.current).forEach(([id, { marker, color, radius, metro }]) => {
       let fill = 0.78, op = 1, w = 1.5, c = '#fff', r = radius;
       if (anyFilter) {
-        const incOK = includes.length === 0 || includes.some(n => window.MIutil.isStrong(n, metro) && metro.demand >= 6);
-        const excHit = excludes.some(n => window.MIutil.isStrong(n, metro) && metro.demand >= 6);
         const q = window.MIutil.quadrant(metro.demand, metro.paying);
         const quadOK = !anyQuadFilter || qf[q.key];
-        const match = incOK && !excHit && quadOK;
-        fill = match ? 0.9  : 0.14;
-        op   = match ? 1    : 0.22;
-        r    = match ? radius + 1 : radius - 1;
+        const incOK = includes.length === 0 || includes.some(n => window.MIutil.isStrong(n, metro) && metro.demand >= 6);
+        const excHit = excludes.some(n => window.MIutil.isStrong(n, metro) && metro.demand >= 6);
+        const nicheOK = incOK && !excHit;
+
+        if (!quadOK) {
+          // Wrong quadrant — heavy fade
+          fill = 0.10; op = 0.18; r = radius - 1;
+        } else if (!nicheOK) {
+          // Right quadrant, wrong niche — keep visible so the quadrant color still reads
+          fill = 0.55; op = 0.55; r = radius;
+        } else {
+          // Match everything
+          fill = 0.95; op = 1; r = radius + 1;
+        }
       }
       if (id === selected) { w = 3; c = atlasTokens.ink; r = radius + 2; }
       marker.setStyle({ fillOpacity: fill, opacity: op, weight: w, color: c, radius: r, fillColor: color });
@@ -362,11 +371,42 @@ function AtlasMicroStat({ label, v, c }) {
 }
 
 // ─── Metro detail card ─────────────────────────────────────
-function AtlasMetroDetail({ metro, onClear, onAnalyze, nicheSel, setNicheSel, pickNiche, findNicheByName }) {
+function AtlasMetroDetail({ metro, onClear, onAnalyze, nicheSel, pickNiche, includeNiches = [], excludeNiches = [] }) {
   const q = window.MIutil.quadrant(metro.demand, metro.paying);
+  const qc = ATLAS_QUAD_COLORS[q.key];
+  const [sortBy, setSortBy] = React.useState('score');
+  const [catFilter, setCatFilter] = React.useState('all');
+
+  const niches = React.useMemo(() => {
+    let rows = window.NICHE_CATS.flatMap(cat => cat.niches.map(n => {
+      const strong = window.MIutil.isStrong(n, metro) && metro.demand >= 6;
+      const score = window.MIutil.comboScore(metro, n);
+      const isInc = includeNiches.some(x => x.id === n.id);
+      const isExc = excludeNiches.some(x => x.id === n.id);
+      const isHighlight = (metro.highlights || []).some(h => n.name.toLowerCase().includes(h.toLowerCase()) || h.toLowerCase().includes(n.name.toLowerCase()));
+      return { niche: n, cat, strong, score, isInc, isExc, isHighlight };
+    }));
+    if (catFilter !== 'all') rows = rows.filter(r => r.cat.id === catFilter);
+    rows.sort((a, b) => {
+      if (sortBy === 'score') return b.score - a.score || (b.strong?1:0) - (a.strong?1:0);
+      if (sortBy === 'rental') {
+        // Sort by the upper rental bound — parse "$500–900" → 900
+        const parse = s => parseInt((s||'').split('–')[1] || s.match(/\d+/g)?.pop() || 0, 10);
+        return parse(b.niche.rental) - parse(a.niche.rental);
+      }
+      if (sortBy === 'name') return a.niche.name.localeCompare(b.niche.name);
+      if (sortBy === 'cat')  return a.cat.label.localeCompare(b.cat.label) || b.score - a.score;
+      return 0;
+    });
+    return rows;
+  }, [metro, sortBy, catFilter, includeNiches, excludeNiches]);
+
+  const strongCount = niches.filter(n => n.strong).length;
+
   return (
-    <div style={{ background:atlasTokens.cardHi, border:`1px solid ${atlasTokens.rule}`, borderRadius:10, overflow:'hidden' }}>
-      <div style={{ padding:'14px 18px 12px', borderBottom:`1px solid ${atlasTokens.rule}`, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10 }}>
+    <div style={{ background:atlasTokens.cardHi, border:`1px solid ${atlasTokens.rule}`, borderRadius:10, overflow:'hidden', display:'flex', flexDirection:'column', maxHeight:'calc(100vh - 100px)' }}>
+      {/* Header */}
+      <div style={{ padding:'14px 18px 12px', borderBottom:`1px solid ${atlasTokens.rule}`, display:'flex', alignItems:'flex-start', justifyContent:'space-between', gap:10, flexShrink:0 }}>
         <div>
           <div style={{ fontFamily:atlasTokens.mono, fontSize:9.5, letterSpacing:1.8, textTransform:'uppercase', color:atlasTokens.dim, marginBottom:4 }}>
             {metro.region} · pop. {(metro.pop/1000000).toFixed(1)}M
@@ -374,9 +414,9 @@ function AtlasMetroDetail({ metro, onClear, onAnalyze, nicheSel, setNicheSel, pi
           <div style={{ fontFamily:atlasTokens.display, fontSize:22, color:atlasTokens.ink, lineHeight:1.1, fontWeight:500 }}>
             {metro.name}<span style={{ color:atlasTokens.dim, fontWeight:400 }}>, {metro.state}</span>
           </div>
-          <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:8, padding:'3px 9px', borderRadius:14, background:`${ATLAS_QUAD_COLORS[q.key]}18`, border:`1px solid ${ATLAS_QUAD_COLORS[q.key]}55` }}>
-            <span style={{ width:6, height:6, borderRadius:'50%', background:ATLAS_QUAD_COLORS[q.key] }} />
-            <span style={{ fontFamily:atlasTokens.mono, fontSize:10, color:ATLAS_QUAD_COLORS[q.key], letterSpacing:0.5 }}>{q.label}</span>
+          <div style={{ display:'inline-flex', alignItems:'center', gap:6, marginTop:8, padding:'3px 9px', borderRadius:14, background:`${qc}18`, border:`1px solid ${qc}55` }}>
+            <span style={{ width:6, height:6, borderRadius:'50%', background:qc }} />
+            <span style={{ fontFamily:atlasTokens.mono, fontSize:10, color:qc, letterSpacing:0.5 }}>{q.label}</span>
           </div>
         </div>
         <button onClick={onClear} style={{
@@ -387,68 +427,147 @@ function AtlasMetroDetail({ metro, onClear, onAnalyze, nicheSel, setNicheSel, pi
         }}>✕</button>
       </div>
 
-      <div style={{ padding:'12px 18px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, borderBottom:`1px solid ${atlasTokens.rule}` }}>
+      {/* Demand/Paying bars */}
+      <div style={{ padding:'12px 18px', display:'grid', gridTemplateColumns:'1fr 1fr', gap:10, borderBottom:`1px solid ${atlasTokens.rule}`, flexShrink:0 }}>
         <AtlasBarStat label="Underserved demand" v={metro.demand} color={metro.demand>=7?atlasTokens.sweet:metro.demand>=5?atlasTokens.comp:atlasTokens.bad} />
         <AtlasBarStat label="Willingness to pay" v={metro.paying} color={metro.paying>=7?atlasTokens.sweet:metro.paying>=5?atlasTokens.comp:atlasTokens.bad} />
       </div>
 
-      <div style={{ padding:'12px 18px', borderBottom:`1px solid ${atlasTokens.rule}` }}>
-        <div style={{ fontFamily:atlasTokens.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase', color:atlasTokens.dim, marginBottom:7 }}>Top niches in this metro</div>
-        <div style={{ display:'flex', flexWrap:'wrap', gap:5 }}>
-          {metro.highlights.map(h => {
-            const matched = findNicheByName ? findNicheByName(h) : null;
-            const isSel = matched && nicheSel === matched.id;
-            const cat = matched?.cat;
+      {/* Niches toolbar */}
+      <div style={{ padding:'12px 18px 8px', borderBottom:`1px solid ${atlasTokens.rule}`, flexShrink:0 }}>
+        <div style={{ display:'flex', alignItems:'baseline', justifyContent:'space-between', marginBottom:8 }}>
+          <div>
+            <div style={{ fontFamily:atlasTokens.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase', color:atlasTokens.dim }}>
+              Service niches
+            </div>
+            <div style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.muted, marginTop:2 }}>
+              {strongCount} strong of {niches.length}
+              {catFilter !== 'all' && (<span> · filtered</span>)}
+            </div>
+          </div>
+          <div style={{ display:'flex', alignItems:'center', gap:6 }}>
+            <span style={{ fontFamily:atlasTokens.mono, fontSize:9, color:atlasTokens.dim, letterSpacing:0.5, textTransform:'uppercase' }}>sort</span>
+            <select
+              value={sortBy}
+              onChange={e => setSortBy(e.target.value)}
+              style={{
+                background:atlasTokens.paper, border:`1px solid ${atlasTokens.rule}`, borderRadius:4,
+                padding:'3px 6px', fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.ink2,
+                cursor:'pointer',
+              }}
+            >
+              <option value="score">Score</option>
+              <option value="rental">Rental</option>
+              <option value="name">Name</option>
+              <option value="cat">Category</option>
+            </select>
+          </div>
+        </div>
+
+        {/* Category pills */}
+        <div style={{ display:'flex', flexWrap:'wrap', gap:4 }}>
+          <button
+            onClick={() => setCatFilter('all')}
+            style={{
+              fontFamily:atlasTokens.mono, fontSize:9.5, padding:'3px 8px', borderRadius:10,
+              background: catFilter==='all' ? atlasTokens.ink : 'transparent',
+              border: `1px solid ${catFilter==='all' ? atlasTokens.ink : atlasTokens.rule}`,
+              color: catFilter==='all' ? atlasTokens.paper : atlasTokens.muted,
+              cursor:'pointer', letterSpacing:0.3,
+            }}
+          >All</button>
+          {window.NICHE_CATS.map(c => {
+            const isActive = catFilter === c.id;
             return (
               <button
-                key={h}
-                onClick={() => { if (matched && pickNiche) pickNiche(matched.id); }}
-                disabled={!matched}
+                key={c.id}
+                onClick={() => setCatFilter(isActive ? 'all' : c.id)}
                 style={{
-                  fontFamily:atlasTokens.sans, fontSize:11, padding:'3px 9px', borderRadius:11,
-                  background: isSel ? `${cat?.color || atlasTokens.accent}1f` : atlasTokens.paper,
-                  border: `1px solid ${isSel ? (cat?.color || atlasTokens.accent) + '88' : atlasTokens.rule}`,
-                  color: isSel ? (cat?.color || atlasTokens.accent) : atlasTokens.ink2,
-                  cursor: matched ? 'pointer' : 'default',
+                  fontFamily:atlasTokens.mono, fontSize:9.5, padding:'3px 8px', borderRadius:10,
+                  background: isActive ? `${c.color}22` : 'transparent',
+                  border: `1px solid ${isActive ? c.color + '77' : atlasTokens.rule}`,
+                  color: isActive ? c.color : atlasTokens.muted,
+                  cursor:'pointer', letterSpacing:0.3,
                   display:'inline-flex', alignItems:'center', gap:5,
                 }}
-                title={matched ? `Set ${matched.name} as deep-analysis target` : ''}
               >
-                {cat && <span style={{ width:5, height:5, borderRadius:1, background:cat.color }} />}
-                {h}
+                <span style={{ width:5, height:5, borderRadius:1, background:c.color }} />
+                {c.label.replace(' Services','').replace(' & Wellness','').replace(' & Financial','')}
               </button>
             );
           })}
         </div>
       </div>
 
-      <div style={{ padding:'12px 18px 16px' }}>
-        <div style={{ fontFamily:atlasTokens.mono, fontSize:9, letterSpacing:1.5, textTransform:'uppercase', color:atlasTokens.dim, marginBottom:7 }}>Run deep analysis</div>
-        <select
-          value={nicheSel || ''}
-          onChange={e => setNicheSel(e.target.value || null)}
-          style={{
-            width:'100%', padding:'7px 10px', borderRadius:5,
-            background:atlasTokens.paper, border:`1px solid ${atlasTokens.rule}`,
-            fontFamily:atlasTokens.sans, fontSize:11.5, color:atlasTokens.ink,
-            marginBottom:8, cursor:'pointer',
-          }}
-        >
-          <option value="">— Scan all niches in this metro —</option>
-          {window.NICHE_CATS.map(c => (
-            <optgroup key={c.id} label={c.label}>
-              {c.niches.map(n => <option key={n.id} value={n.id}>{n.name}</option>)}
-            </optgroup>
-          ))}
-        </select>
-        <button onClick={onAnalyze} style={{
-          width:'100%', padding:'9px 12px', borderRadius:5,
-          background:atlasTokens.ink, color:atlasTokens.paper, border:'none', cursor:'pointer',
-          fontFamily:atlasTokens.sans, fontSize:11.5, fontWeight:500, letterSpacing:0.2,
-          display:'flex', alignItems:'center', justifyContent:'center', gap:8,
-        }}>
-          {nicheSel ? 'Analyze this niche' : 'Scan full market'} <span style={{ fontFamily:atlasTokens.mono, opacity:0.6 }}>→</span>
-        </button>
+      {/* Niche list */}
+      <div style={{ flex:1, overflow:'auto', minHeight:0 }}>
+        {niches.map((row, i) => {
+          const { niche: n, cat, strong, score, isInc, isExc, isHighlight } = row;
+          const isSel = nicheSel === n.id;
+          const scColor = score>=7.5 ? atlasTokens.sweet : score>=6 ? atlasTokens.comp : score>=4.5 ? atlasTokens.demand : atlasTokens.muted;
+          return (
+            <div
+              key={n.id}
+              onClick={() => pickNiche && pickNiche(n.id)}
+              style={{
+                position:'relative', padding:'10px 18px 10px 22px', cursor:'pointer',
+                background: isSel ? `${atlasTokens.accent}10` : isExc ? `${atlasTokens.bad}06` : 'transparent',
+                borderBottom: i === niches.length - 1 ? 'none' : `1px solid ${atlasTokens.rule}`,
+                display:'flex', alignItems:'center', gap:12,
+                opacity: isExc ? 0.55 : 1,
+                transition:'background .12s',
+              }}
+              onMouseEnter={e => { if(!isSel && !isExc) e.currentTarget.style.background = `${atlasTokens.ink}04`; }}
+              onMouseLeave={e => { if(!isSel && !isExc) e.currentTarget.style.background = 'transparent'; }}
+            >
+              {/* Category color stripe */}
+              <div style={{ position:'absolute', left:0, top:0, bottom:0, width:3, background:cat.color, opacity: strong ? 1 : 0.35 }} />
+
+              <div style={{ flex:1, minWidth:0 }}>
+                <div style={{ display:'flex', alignItems:'center', gap:7, marginBottom:3 }}>
+                  <span style={{
+                    fontFamily:atlasTokens.sans, fontSize:13, color:atlasTokens.ink, fontWeight:500,
+                    textDecoration: isExc ? 'line-through' : 'none',
+                  }}>{n.name}</span>
+                  {isInc && (
+                    <span style={{ fontFamily:atlasTokens.mono, fontSize:9, padding:'1px 5px', borderRadius:3, background:`${atlasTokens.accent}1f`, color:atlasTokens.accent, fontWeight:600 }}>+</span>
+                  )}
+                  {isExc && (
+                    <span style={{ fontFamily:atlasTokens.mono, fontSize:9, padding:'1px 5px', borderRadius:3, background:`${atlasTokens.bad}1f`, color:atlasTokens.bad, fontWeight:600 }}>−</span>
+                  )}
+                  {isHighlight && !isInc && !isExc && (
+                    <span title="Featured in this metro" style={{ fontFamily:atlasTokens.mono, fontSize:9, color:atlasTokens.accent, letterSpacing:0.3 }}>★</span>
+                  )}
+                </div>
+                <div style={{ display:'flex', alignItems:'center', gap:8, fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.muted }}>
+                  <span>{cat.label.replace(' Services','').replace(' & Wellness','').replace(' & Financial','')}</span>
+                  <span style={{ color:atlasTokens.dim }}>·</span>
+                  <span style={{ color:atlasTokens.ink2, fontWeight:500 }}>${n.rental.replace('$','')}/mo</span>
+                  <span style={{ color:atlasTokens.dim }}>·</span>
+                  {strong
+                    ? <span style={{ color:atlasTokens.sweet }}>● strong</span>
+                    : <span style={{ color:atlasTokens.dim }}>○ wide</span>}
+                </div>
+              </div>
+
+              <div style={{ display:'flex', flexDirection:'column', alignItems:'flex-end', gap:6 }}>
+                <span style={{ fontFamily:atlasTokens.display, fontSize:18, color:scColor, fontWeight:500, lineHeight:1 }}>
+                  {score.toFixed(1)}
+                </span>
+                <button
+                  onClick={e => { e.stopPropagation(); onAnalyze(metro, n); }}
+                  style={{
+                    fontFamily:atlasTokens.mono, fontSize:9.5, padding:'2px 7px', borderRadius:3,
+                    background:'transparent', border:`1px solid ${atlasTokens.rule}`,
+                    color:atlasTokens.ink2, cursor:'pointer', letterSpacing:0.4,
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.background = atlasTokens.ink; e.currentTarget.style.color = atlasTokens.paper; }}
+                  onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = atlasTokens.ink2; }}
+                >analyze ▸</button>
+              </div>
+            </div>
+          );
+        })}
       </div>
     </div>
   );
@@ -468,22 +587,21 @@ function AtlasBarStat({ label, v, color }) {
   );
 }
 
-// ─── Ranked table — the hero ───────────────────────────────
-function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], quadrantFilters = {}, setSelected, onAnalyze, onClearMetro, clearAllFilters, clearQuadrants, limit = 60, pickNiche }) {
+// ─── Ranked table — metro-level summary ────────────────────
+function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], quadrantFilters = {}, setSelected, onClearMetro, clearAllFilters, limit = 60 }) {
   const [sortKey, setSortKey] = React.useState('score');
   const [sortDir, setSortDir] = React.useState('desc');
+  const QUAD_RANK = { sweet: 4, demand: 3, comp: 2, watch: 1 };
+
   const sorted = React.useMemo(() => {
     const r = [...rows];
     r.sort((a,b) => {
       let av, bv;
       switch (sortKey) {
-        case 'score':   av=a.score; bv=b.score; break;
-        case 'metro':   av=a.metro.name; bv=b.metro.name; break;
-        case 'state':   av=a.metro.state; bv=b.metro.state; break;
-        case 'niche':   av=a.niche.name; bv=b.niche.name; break;
-        case 'demand':  av=a.metro.demand; bv=b.metro.demand; break;
-        case 'paying':  av=a.metro.paying; bv=b.metro.paying; break;
-        case 'fit':     av=a.strong?1:0; bv=b.strong?1:0; break;
+        case 'score':  av=a.score; bv=b.score; break;
+        case 'metro':  av=a.metro.name; bv=b.metro.name; break;
+        case 'demand': av=a.metro.demand; bv=b.metro.demand; break;
+        case 'fit':    av=QUAD_RANK[a.q.key]; bv=QUAD_RANK[b.q.key]; break;
         default: av=a.score; bv=b.score;
       }
       if (typeof av === 'string') return sortDir==='asc' ? av.localeCompare(bv) : bv.localeCompare(av);
@@ -500,7 +618,7 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
 
   const Th = ({ k, children, w, align='left' }) => (
     <th onClick={() => onSort(k)} style={{
-      textAlign:align, padding:'10px 14px', cursor:'pointer', userSelect:'none',
+      textAlign:align, padding:'10px 16px', cursor:'pointer', userSelect:'none',
       fontFamily:atlasTokens.mono, fontSize:9.5, letterSpacing:1.8, textTransform:'uppercase',
       color: sortKey===k ? atlasTokens.ink : atlasTokens.muted, fontWeight:500,
       borderBottom:`1px solid ${atlasTokens.ruleHi}`, position:'sticky', top:0,
@@ -521,8 +639,8 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
             Opportunity rankings
           </div>
           <div style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.muted, marginTop:3 }}>
-            {sorted.length} of {window.METROS.length * window.MIutil.niches().length} combinations
-            {selected && (<span> · <span style={{ color:atlasTokens.ink2 }}>{window.METROS.find(m=>m.id===selected)?.name}</span></span>)}
+            {sorted.length} of {window.METROS.length} metros
+            {selected && (<span> · <span style={{ color:atlasTokens.ink2 }}>{window.METROS.find(m=>m.id===selected)?.name} selected</span></span>)}
             {activeQuads.length > 0 && (<span> · <span style={{ color:atlasTokens.ink2 }}>{activeQuads.length} quadrant{activeQuads.length>1?'s':''}</span></span>)}
             {includeNiches.length > 0 && (<span> · <span style={{ color:atlasTokens.accent }}>+{includeNiches.length} include</span></span>)}
             {excludeNiches.length > 0 && (<span> · <span style={{ color:atlasTokens.bad }}>−{excludeNiches.length} exclude</span></span>)}
@@ -585,25 +703,22 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
         <table style={{ width:'100%', borderCollapse:'collapse' }}>
           <thead>
             <tr>
-              <Th k="score" w={64}>#</Th>
+              <Th k="score" w={56}>#</Th>
               <Th k="metro">Metro</Th>
-              <Th k="niche">Service niche</Th>
-              <Th k="demand" w={70} align="right">Demand</Th>
-              <Th k="paying" w={70} align="right">Paying</Th>
-              <Th k="fit" w={70} align="right">Fit</Th>
-              <Th k="score" w={90} align="right">Rental</Th>
-              <Th k="score" w={70} align="right">Score</Th>
-              <th style={{ borderBottom:`1px solid ${atlasTokens.ruleHi}`, padding:'10px 14px', background:atlasTokens.cardHi, width:60 }}></th>
+              <Th k="demand" w={96} align="right">Demand</Th>
+              <Th k="fit" w={140}>Fit</Th>
+              <Th k="score" w={120} align="right">Score</Th>
             </tr>
           </thead>
           <tbody>
             {sorted.slice(0, limit).map((r, i) => {
-              const q = window.MIutil.quadrant(r.metro.demand, r.metro.paying);
-              const qc = ATLAS_QUAD_COLORS[q.key];
+              const qc = ATLAS_QUAD_COLORS[r.q.key];
               const isSel = r.metro.id === selected;
+              const scColor = r.score>=7.5?atlasTokens.sweet:r.score>=6?atlasTokens.comp:r.score>=4.5?atlasTokens.demand:atlasTokens.muted;
+              const dColor = r.metro.demand>=7?atlasTokens.sweet:r.metro.demand>=5?atlasTokens.ink2:atlasTokens.muted;
               return (
-                <tr key={`${r.metro.id}-${r.niche.id}`}
-                    onClick={() => { setSelected(r.metro.id); if (pickNiche) pickNiche(r.niche.id); }}
+                <tr key={r.metro.id}
+                    onClick={() => setSelected(r.metro.id)}
                     style={{
                       cursor:'pointer',
                       background: isSel ? `${atlasTokens.accent}0d` : 'transparent',
@@ -612,44 +727,40 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
                     onMouseEnter={e => { if(!isSel) e.currentTarget.style.background = `${atlasTokens.ink}05`; }}
                     onMouseLeave={e => { if(!isSel) e.currentTarget.style.background = 'transparent'; }}
                 >
-                  <td style={{ padding:'9px 14px', fontFamily:atlasTokens.mono, fontSize:11, color:atlasTokens.muted }}>{i+1}</td>
-                  <td style={{ padding:'9px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <span style={{ width:6, height:6, borderRadius:'50%', background:qc, flexShrink:0 }} />
-                      <span style={{ fontFamily:atlasTokens.display, fontSize:14, color:atlasTokens.ink, fontWeight:500 }}>{r.metro.name}</span>
+                  <td style={{ padding:'10px 16px', fontFamily:atlasTokens.mono, fontSize:11, color:atlasTokens.muted }}>{String(i+1).padStart(2,'0')}</td>
+                  <td style={{ padding:'10px 16px' }}>
+                    <div style={{ display:'flex', alignItems:'center', gap:9 }}>
+                      <span style={{ width:7, height:7, borderRadius:'50%', background:qc, flexShrink:0 }} />
+                      <span style={{ fontFamily:atlasTokens.display, fontSize:15, color:atlasTokens.ink, fontWeight:500 }}>{r.metro.name}</span>
                       <span style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.dim }}>{r.metro.state}</span>
                     </div>
                   </td>
-                  <td style={{ padding:'9px 14px' }}>
-                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
-                      <span style={{ width:3, height:14, borderRadius:1, background:r.cat.color, flexShrink:0 }} />
-                      <span style={{ fontFamily:atlasTokens.sans, fontSize:12.5, color:atlasTokens.ink2 }}>{r.niche.name}</span>
-                      <span style={{ fontFamily:atlasTokens.mono, fontSize:9.5, color:atlasTokens.dim, textTransform:'lowercase' }}>{r.cat.label.replace(' Services','').replace(' & Financial','').replace(' & Wellness','')}</span>
+                  <td style={{ padding:'10px 16px', textAlign:'right' }}>
+                    <div style={{ display:'inline-flex', alignItems:'center', gap:7, justifyContent:'flex-end' }}>
+                      <div style={{ width:40, height:3, background:atlasTokens.rule, borderRadius:2, overflow:'hidden' }}>
+                        <div style={{ width:`${r.metro.demand*10}%`, height:'100%', background:dColor }} />
+                      </div>
+                      <span style={{ fontFamily:atlasTokens.mono, fontSize:12, color:dColor, width:14, textAlign:'right' }}>{r.metro.demand}</span>
                     </div>
                   </td>
-                  <td style={{ padding:'9px 14px', textAlign:'right', fontFamily:atlasTokens.mono, fontSize:12, color: r.metro.demand>=7?atlasTokens.sweet:r.metro.demand>=5?atlasTokens.ink2:atlasTokens.muted }}>{r.metro.demand}</td>
-                  <td style={{ padding:'9px 14px', textAlign:'right', fontFamily:atlasTokens.mono, fontSize:12, color: r.metro.paying>=7?atlasTokens.sweet:r.metro.paying>=5?atlasTokens.ink2:atlasTokens.muted }}>{r.metro.paying}</td>
-                  <td style={{ padding:'9px 14px', textAlign:'right' }}>
-                    {r.strong
-                      ? <span style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.sweet }}>● strong</span>
-                      : <span style={{ fontFamily:atlasTokens.mono, fontSize:10, color:atlasTokens.dim }}>○ wide</span>}
+                  <td style={{ padding:'10px 16px' }}>
+                    <span style={{
+                      fontFamily:atlasTokens.mono, fontSize:10, padding:'3px 9px', borderRadius:10,
+                      background:`${qc}18`, border:`1px solid ${qc}55`, color:qc,
+                      display:'inline-flex', alignItems:'center', gap:5,
+                      letterSpacing:0.3,
+                    }}>
+                      <span style={{ width:5, height:5, borderRadius:'50%', background:qc }} />
+                      {r.q.label}
+                    </span>
                   </td>
-                  <td style={{ padding:'9px 14px', textAlign:'right', fontFamily:atlasTokens.mono, fontSize:11, color:atlasTokens.muted }}>{r.niche.rental}</td>
-                  <td style={{ padding:'9px 14px', textAlign:'right', fontFamily:atlasTokens.display, fontSize:16, fontWeight:500,
-                    color: r.score>=7.5?atlasTokens.sweet:r.score>=6?atlasTokens.comp:atlasTokens.muted }}>
-                    {r.score.toFixed(1)}
-                  </td>
-                  <td style={{ padding:'9px 14px', textAlign:'right' }}>
-                    <button
-                      onClick={e => { e.stopPropagation(); onAnalyze(r.metro, r.niche); }}
-                      style={{
-                        fontFamily:atlasTokens.mono, fontSize:10, padding:'3px 8px', borderRadius:3,
-                        background:'transparent', border:`1px solid ${atlasTokens.rule}`,
-                        color:atlasTokens.ink2, cursor:'pointer', letterSpacing:0.4,
-                      }}
-                      onMouseEnter={e => { e.currentTarget.style.background = atlasTokens.ink; e.currentTarget.style.color = atlasTokens.paper; }}
-                      onMouseLeave={e => { e.currentTarget.style.background = 'transparent'; e.currentTarget.style.color = atlasTokens.ink2; }}
-                    >analyze →</button>
+                  <td style={{ padding:'10px 16px', textAlign:'right' }}>
+                    <div style={{ display:'inline-flex', alignItems:'baseline', gap:6, justifyContent:'flex-end' }}>
+                      <span style={{ fontFamily:atlasTokens.display, fontSize:18, color:scColor, fontWeight:500, lineHeight:1 }}>
+                        {r.score.toFixed(1)}
+                      </span>
+                      <span style={{ fontFamily:atlasTokens.mono, fontSize:9.5, color:atlasTokens.dim }}>/10</span>
+                    </div>
                   </td>
                 </tr>
               );
@@ -672,7 +783,7 @@ function AtlasAnalysisModal({ analysis, onClose }) {
     no_go:          { label:'No go',          color:atlasTokens.bad,    bg:`${atlasTokens.bad}14` },
   }[a.decision];
   return (
-    <div style={{ position:'absolute', inset:0, background:'rgba(26,29,35,0.42)', backdropFilter:'blur(2px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'40px 32px', zIndex:50, overflow:'auto' }}
+    <div style={{ position:'absolute', inset:0, background:'rgba(26,29,35,0.42)', backdropFilter:'blur(2px)', display:'flex', alignItems:'flex-start', justifyContent:'center', padding:'40px 32px', zIndex:2000, overflow:'auto' }}
          onClick={e => { if (e.target === e.currentTarget) onClose(); }}>
       <div style={{
         background:atlasTokens.paper, border:`1px solid ${atlasTokens.ruleHi}`, borderRadius:12,
@@ -863,7 +974,7 @@ function AtlasAnalysisLoader({ metro, niche, onCancel, error }) {
     return () => clearInterval(t);
   }, [error]);
   return (
-    <div style={{ position:'absolute', inset:0, background:`${atlasTokens.paper}d0`, backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:60 }}>
+    <div style={{ position:'absolute', inset:0, background:`${atlasTokens.paper}d0`, backdropFilter:'blur(2px)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:1900 }}>
       <div style={{
         background:atlasTokens.card, border:`1px solid ${atlasTokens.ruleHi}`, borderRadius:12,
         padding:'28px 36px', minWidth:420, maxWidth:520, boxShadow:'0 20px 60px rgba(26,29,35,0.15)',
@@ -1196,19 +1307,23 @@ function AtlasApp() {
   const activeQuadKeys = Object.keys(quadrantFilters).filter(k => quadrantFilters[k]);
 
   const allCombos = React.useMemo(() => window.MIutil.buildCombos(), []);
-  const filteredCombos = React.useMemo(() => {
-    let r = allCombos;
-    if (selected) r = r.filter(c => c.metro.id === selected);
-    if (includeNiches.length) r = r.filter(c => includeNiches.some(n => n.id === c.niche.id));
-    if (excludeNiches.length) r = r.filter(c => !excludeNiches.some(n => n.id === c.niche.id));
-    if (anyQuad) {
-      r = r.filter(c => {
-        const q = window.MIutil.quadrant(c.metro.demand, c.metro.paying);
-        return quadrantFilters[q.key];
-      });
-    }
+
+  // One row per metro for the rankings table
+  const allMetroRows = React.useMemo(() => {
+    return window.METROS.map(metro => {
+      const q = window.MIutil.quadrant(metro.demand, metro.paying);
+      const score = (metro.demand + metro.paying) / 2;
+      return { metro, q, score };
+    });
+  }, []);
+
+  const filteredMetroRows = React.useMemo(() => {
+    let r = allMetroRows;
+    if (includeNiches.length) r = r.filter(row => includeNiches.some(n => window.MIutil.isStrong(n, row.metro) && row.metro.demand >= 6));
+    if (excludeNiches.length) r = r.filter(row => !excludeNiches.some(n => window.MIutil.isStrong(n, row.metro) && row.metro.demand >= 6));
+    if (anyQuad) r = r.filter(row => quadrantFilters[row.q.key]);
     return r;
-  }, [allCombos, selected, includeNiches, excludeNiches, quadrantFilters, anyQuad]);
+  }, [allMetroRows, includeNiches, excludeNiches, quadrantFilters, anyQuad]);
 
   const topCombo = allCombos[0];
   const selectedMetro = selected ? window.METROS.find(m => m.id === selected) : null;
@@ -1390,32 +1505,30 @@ function AtlasApp() {
 
           <div style={{ flex:'1.4 1 0', minHeight:300, display:'flex', flexDirection:'column' }}>
             <AtlasTable
-              rows={filteredCombos}
+              rows={filteredMetroRows}
               selected={selected}
               includeNiches={includeNiches}
               excludeNiches={excludeNiches}
               quadrantFilters={quadrantFilters}
               setSelected={setSelected}
-              onAnalyze={openAnalysis}
               onClearMetro={() => setSelected(null)}
               clearAllFilters={clearAllFilters}
               limit={t.tableLimit}
-              pickNiche={pickNiche}
             />
           </div>
         </div>
 
         {/* Right rail */}
-        <div style={{ width:320, flexShrink:0, padding:'18px 18px 18px 0', overflow:'auto' }}>
+        <div style={{ width:380, flexShrink:0, padding:'18px 18px 18px 0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
           {selectedMetro
             ? <AtlasMetroDetail
                 metro={selectedMetro}
                 onClear={() => setSelected(null)}
-                onAnalyze={handleAnalyzeFromDetail}
+                onAnalyze={openAnalysis}
                 nicheSel={nicheSel}
-                setNicheSel={setNicheSel}
                 pickNiche={pickNiche}
-                findNicheByName={findNicheByName}
+                includeNiches={includeNiches}
+                excludeNiches={excludeNiches}
               />
             : <AtlasCoachHint
                 topCombo={topCombo}
