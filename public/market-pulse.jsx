@@ -336,7 +336,8 @@ function MarketPulse({ tokens, onClose }) {
     }, 2200);
 
     try {
-      const metros = ALL_METROS().filter(m => selMetros.includes(m.id));
+      const metros = ALL_METROS().filter(m => selMetros.includes(m.id))
+        .map(m => ({ ...m, kwName: window.MIutil?.kwName(m) || `${m.name} ${m.state}` }));
       const allNiches = ALL_NICHES();
       const categories = allNiches.filter(n => selNiches.includes(n.id))
         .map(n => ({ id: n.id, name: n.name, rental: n.rental }));

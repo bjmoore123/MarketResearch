@@ -300,77 +300,67 @@ app.get('/api/census/enrich', async (req, res) => {
 // POST /api/census/enrich-all
 // Fetches all unique state_fips from the request body cities array,
 // runs ACS queries in parallel, returns merged enriched city list.
+// Score helpers (Census → 1–10)
+function incomeScore(v) { return Math.min(10, Math.max(1, Math.round((v-25000)/10000+1))); }
+function growthScore(pct) {
+  if (pct >= 10) return 10; if (pct >= 7) return 9; if (pct >= 5) return 8;
+  if (pct >= 3)  return 7;  if (pct >= 1.5) return 6; if (pct >= 0) return 5;
+  if (pct >= -1) return 4;  if (pct >= -3) return 3;  return 2;
+}
+
 app.post('/api/census/enrich-all', async (req, res) => {
   const key = process.env.CENSUS_API_KEY;
   if (!key) return res.status(503).json({ error: 'CENSUS_API_KEY not configured.' });
-
   const { cities } = req.body;
   if (!Array.isArray(cities)) return res.status(400).json({ error: 'cities array required' });
-
   const stateFips = [...new Set(cities.map(c => c.state_fips).filter(Boolean))];
-
   try {
-    const stateData = {};
-    await Promise.all(stateFips.map(async (fips) => {
-      const vars = 'B01001_001E,B19013_001E,B25001_001E,B25003_002E';
-      const url  = `https://api.census.gov/data/2022/acs/acs5?get=NAME,${vars}&for=place:*&in=state:${fips}&key=${key}`;
-      const r    = await fetch(url);
-      if (!r.ok) { stateData[fips] = []; return; }
-      const [header, ...rows] = await r.json();
-      const col = (n) => header.indexOf(n);
-      stateData[fips] = rows.map(row => ({
-        name   : row[col('NAME')]?.replace(/ city,.*| town,.*| CDP,.*/,'').trim().toLowerCase(),
-        pop    : parseInt(row[col('B01001_001E')])||0,
-        income : parseInt(row[col('B19013_001E')])||0,
-        owned  : parseInt(row[col('B25003_002E')])||0,
-        housing: parseInt(row[col('B25001_001E')])||0,
-      }));
-    }));
-
+    const acsData = {}, decData = {};
+    await Promise.all(stateFips.flatMap(fips => [
+      // ACS 2022: pop + median income
+      (async () => {
+        const r = await fetch(`https://api.census.gov/data/2022/acs/acs5?get=NAME,B01001_001E,B19013_001E&for=place:*&in=state:${fips}&key=${key}`);
+        if (!r.ok) { acsData[fips]=[]; return; }
+        const [h,...rows] = await r.json();
+        const c = n => h.indexOf(n);
+        acsData[fips] = rows.map(row=>({ name:row[c('NAME')]?.replace(/ city,.*| town,.*| CDP,.*/,'').trim().toLowerCase(), pop22:+row[c('B01001_001E')]||0, income:+row[c('B19013_001E')]||0 }));
+      })(),
+      // Decennial 2020: pop baseline for growth %
+      (async () => {
+        const r = await fetch(`https://api.census.gov/data/2020/dec/pl?get=NAME,P1_001N&for=place:*&in=state:${fips}&key=${key}`);
+        if (!r.ok) { decData[fips]=[]; return; }
+        const [h,...rows] = await r.json();
+        const c = n => h.indexOf(n);
+        decData[fips] = rows.map(row=>({ name:row[c('NAME')]?.replace(/ city,.*| town,.*| CDP,.*/,'').trim().toLowerCase(), pop20:+row[c('P1_001N')]||0 }));
+      })(),
+    ]));
+    const match = (rows, name) => rows.find(r=>r.name===name) || rows.find(r=>r.name.startsWith(name)) || rows.find(r=>name.startsWith(r.name));
     const enriched = cities.map(city => {
-      const rows   = stateData[city.state_fips] || [];
-      const match  = rows.find(r => r.name === city.name.toLowerCase());
-      if (!match) return { ...city, census_matched: false };
-      const ownedR = match.housing > 0 ? match.owned / match.housing : 0;
-      return {
-        ...city,
-        census_matched : true,
-        census_income  : match.income,
-        census_pop     : match.pop,
-        owned_ratio    : parseFloat(ownedR.toFixed(2)),
-        paying : Math.min(10, Math.max(1, Math.round((match.income - 25000) / 9000 + 1))),
-        demand : city.demand, // keep existing — growth needs PEP data (separate call)
-      };
+      const n = city.name.toLowerCase();
+      const acs = match(acsData[city.state_fips]||[], n);
+      const dec = match(decData[city.state_fips]||[], n);
+      if (!acs) return { ...city, census_matched:false };
+      const pct = dec?.pop20>0 ? ((acs.pop22-dec.pop20)/dec.pop20)*100 : null;
+      return { ...city, census_matched:true, census_income:acs.income, census_pop_2022:acs.pop22, census_pop_2020:dec?.pop20||0, growth_pct_3yr:pct!==null?+pct.toFixed(2):null, income:incomeScore(acs.income), growth:pct!==null?growthScore(pct):city.growth };
     });
-
-    res.json({ enriched, fetched_at: new Date().toISOString(),
-               matched: enriched.filter(c => c.census_matched).length,
-               total: enriched.length });
-  } catch (e) {
-    console.error('Census enrich-all error:', e.message);
-    res.status(500).json({ error: e.message });
-  }
+    res.json({ enriched, fetched_at:new Date().toISOString(), matched:enriched.filter(c=>c.census_matched).length, total:enriched.length, note:'growth=ACS2022 vs Dec2020 pop change; income=ACS2022 median HH income' });
+  } catch(e) { console.error('enrich-all error:',e.message); res.status(500).json({error:e.message}); }
 });
 
-// ─── Gap Finder ───────────────────────────────────────────
-// POST /api/gap-finder
-// body: { metro: {id,name,state,pop,demand,paying,region}, standard_niches: [names] }
-// Step 1: Claude generates 15 gap hypotheses
-// Step 2: DFS validates volume for each
-// Returns ranked, volume-validated gap opportunities
+
 app.post('/api/gap-finder', async (req, res) => {
   const { metro, standard_niches = [] } = req.body;
   if (!metro) return res.status(400).json({ error: 'metro required' });
 
   // ── Step 1: Claude generates hypotheses ──
-  const growthLabel = metro.demand >= 7 ? 'rapid' : metro.demand >= 5 ? 'moderate' : 'slow/declining';
-  const incomeLabel = metro.paying  >= 7 ? 'high'  : metro.paying  >= 5 ? 'medium'  : 'lower';
+  const growthLabel = metro.growth >= 7 ? 'rapid' : metro.growth >= 5 ? 'moderate' : 'slow/declining';
+  const incomeLabel = metro.income  >= 7 ? 'high'  : metro.income  >= 5 ? 'medium'  : 'lower';
   const prompt = `You are a rank-and-rent lead generation expert identifying UNDERSERVED service business niches.
 
 METRO: ${metro.name}, ${metro.state}
 Population: ${(metro.pop||0).toLocaleString()}
 Growth: ${growthLabel} | Income: ${incomeLabel} | Region: ${metro.region}
-Demand score: ${metro.demand}/10 | Paying score: ${metro.paying}/10
+Demand score: ${metro.growth}/10 | Paying score: ${metro.income}/10
 
 ALREADY SATURATED by rank-and-rent operators — DO NOT suggest these:
 ${standard_niches.join(', ')}

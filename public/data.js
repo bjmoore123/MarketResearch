@@ -4,56 +4,56 @@
 
 window.METROS = [
   // ── Sweet Spot ──
-  {id:'phoenix',     name:'Phoenix',                state:'AZ', lat:33.4484, lng:-112.0740, pop:5000000,  demand:9, paying:8, region:'sunbelt',   highlights:['HVAC','Roofing','Pool Service','Pest Control']},
-  {id:'dallas',      name:'Dallas–Fort Worth',      state:'TX', lat:32.7767, lng:-96.7970,  pop:7700000,  demand:8, paying:9, region:'texas',     highlights:['Roofing','HVAC','Landscaping','Moving']},
-  {id:'atlanta',     name:'Atlanta',                state:'GA', lat:33.7490, lng:-84.3880,  pop:6200000,  demand:8, paying:8, region:'south',     highlights:['HVAC','Roofing','Tree Service']},
-  {id:'houston',     name:'Houston',                state:'TX', lat:29.7604, lng:-95.3698,  pop:7300000,  demand:7, paying:8, region:'texas',     highlights:['Roofing','HVAC','Foundation Repair']},
-  {id:'nashville',   name:'Nashville',              state:'TN', lat:36.1627, lng:-86.7816,  pop:2100000,  demand:8, paying:8, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
-  {id:'charlotte',   name:'Charlotte',              state:'NC', lat:35.2271, lng:-80.8431,  pop:2700000,  demand:8, paying:7, region:'south',     highlights:['HVAC','Roofing','Senior Care']},
-  {id:'tampa',       name:'Tampa–St. Pete',         state:'FL', lat:27.9506, lng:-82.4572,  pop:3200000,  demand:7, paying:8, region:'florida',   highlights:['Roofing','Pool Service','Pest Control']},
-  {id:'denver',      name:'Denver',                 state:'CO', lat:39.7392, lng:-104.9903, pop:2900000,  demand:7, paying:8, region:'mountain',  highlights:['Roofing','Landscaping','HVAC']},
-  {id:'orlando',     name:'Orlando',                state:'FL', lat:28.5383, lng:-81.3792,  pop:2700000,  demand:7, paying:7, region:'florida',   highlights:['Pool Service','Roofing','Pest Control']},
-  {id:'austin',      name:'Austin',                 state:'TX', lat:30.2672, lng:-97.7431,  pop:2300000,  demand:8, paying:7, region:'texas',     highlights:['HVAC','Landscaping','Cleaning']},
-  {id:'raleigh',     name:'Raleigh–Durham',         state:'NC', lat:35.7796, lng:-78.6382,  pop:1400000,  demand:8, paying:7, region:'south',     highlights:['HVAC','Roofing','Vet Clinics']},
-  {id:'saltlake',    name:'Salt Lake City',         state:'UT', lat:40.7608, lng:-111.8910, pop:1250000,  demand:8, paying:7, region:'mountain',  highlights:['Roofing','HVAC','Plumbing']},
-  {id:'lasvegas',    name:'Las Vegas',              state:'NV', lat:36.1699, lng:-115.1398, pop:2300000,  demand:7, paying:8, region:'sunbelt',   highlights:['HVAC','Pool Service','Auto Repair']},
-  {id:'jacksonville',name:'Jacksonville',           state:'FL', lat:30.3322, lng:-81.6557,  pop:1600000,  demand:7, paying:7, region:'florida',   highlights:['Roofing','HVAC','Tree Service']},
-  {id:'capecoral',   name:'Cape Coral–Fort Myers',  state:'FL', lat:26.6406, lng:-81.8723,  pop:800000,   demand:7, paying:7, region:'florida',   highlights:['Roofing','Pool Service','Senior Care']},
-  {id:'columbus',    name:'Columbus',               state:'OH', lat:39.9612, lng:-82.9988,  pop:2100000,  demand:6, paying:7, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
-  {id:'indianapolis',name:'Indianapolis',           state:'IN', lat:39.7684, lng:-86.1581,  pop:2100000,  demand:6, paying:7, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
-  {id:'sanantonio',  name:'San Antonio',            state:'TX', lat:29.4241, lng:-98.4936,  pop:2600000,  demand:7, paying:6, region:'texas',     highlights:['HVAC','Roofing','Plumbing']},
-  {id:'boise',       name:'Boise',                  state:'ID', lat:43.6150, lng:-116.2023, pop:780000,   demand:8, paying:6, region:'mountain',  highlights:['Roofing','HVAC','Painting']},
-  {id:'huntsville',  name:'Huntsville',             state:'AL', lat:34.7304, lng:-86.5861,  pop:480000,   demand:7, paying:6, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
-  {id:'greenville',  name:'Greenville',             state:'SC', lat:34.8526, lng:-82.3940,  pop:930000,   demand:7, paying:6, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
-  {id:'coloradosp',  name:'Colorado Springs',       state:'CO', lat:38.8339, lng:-104.8214, pop:760000,   demand:6, paying:7, region:'mountain',  highlights:['Roofing','HVAC','Painting']},
-  {id:'richmond',    name:'Richmond',               state:'VA', lat:37.5407, lng:-77.4360,  pop:1300000,  demand:6, paying:7, region:'south',     highlights:['HVAC','Roofing','Cleaning']},
-  {id:'sarasota',    name:'Sarasota',               state:'FL', lat:27.3364, lng:-82.5307,  pop:850000,   demand:6, paying:7, region:'florida',   highlights:['Pool Service','Roofing','Senior Care']},
-  {id:'kansascity',  name:'Kansas City',            state:'MO', lat:39.0997, lng:-94.5786,  pop:2200000,  demand:5, paying:7, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
-  {id:'knoxville',   name:'Knoxville',              state:'TN', lat:35.9606, lng:-83.9207,  pop:870000,   demand:6, paying:6, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
-  {id:'oklahoma',    name:'Oklahoma City',          state:'OK', lat:35.4676, lng:-97.5164,  pop:1400000,  demand:6, paying:6, region:'sunbelt',   highlights:['HVAC','Roofing','Pest Control']},
-  {id:'tucson',      name:'Tucson',                 state:'AZ', lat:32.2226, lng:-110.9747, pop:1050000,  demand:6, paying:6, region:'sunbelt',   highlights:['HVAC','Pest Control','Pool Service']},
-  {id:'chicago',     name:'Chicago',                state:'IL', lat:41.8781, lng:-87.6298,  pop:9500000,  demand:5, paying:8, region:'midwest',   highlights:['HVAC','Roofing','Cleaning']},
-  {id:'miami',       name:'Miami–Fort Lauderdale', state:'FL', lat:25.7617, lng:-80.1918,  pop:6200000,  demand:6, paying:7, region:'florida',   highlights:['Pool Service','Roofing','Pest Control']},
-  {id:'dc',          name:'Washington',             state:'DC', lat:38.9072, lng:-77.0369,  pop:6400000,  demand:4, paying:8, region:'northeast', highlights:['HVAC','Landscaping','Senior Care']},
-  {id:'boston',      name:'Boston',                 state:'MA', lat:42.3601, lng:-71.0589,  pop:4900000,  demand:4, paying:8, region:'northeast', highlights:['HVAC','Roofing','Cleaning']},
-  {id:'minneapolis', name:'Minneapolis–St. Paul',   state:'MN', lat:44.9778, lng:-93.2650,  pop:3700000,  demand:5, paying:7, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
-  {id:'philadelphia',name:'Philadelphia',           state:'PA', lat:39.9526, lng:-75.1652,  pop:6200000,  demand:4, paying:7, region:'northeast', highlights:['HVAC','Roofing','Cleaning']},
-  {id:'seattle',     name:'Seattle',                state:'WA', lat:47.6062, lng:-122.3321, pop:4000000,  demand:4, paying:7, region:'west',      highlights:['Roofing','Landscaping','HVAC']},
-  {id:'sandiego',    name:'San Diego',              state:'CA', lat:32.7157, lng:-117.1611, pop:3300000,  demand:4, paying:7, region:'west',      highlights:['HVAC','Pool Service','Pest Control']},
-  {id:'losangeles',  name:'Los Angeles',            state:'CA', lat:34.0522, lng:-118.2437, pop:13200000, demand:3, paying:8, region:'west',      highlights:['Pool Service','Cleaning','HVAC']},
-  {id:'newyork',     name:'New York',               state:'NY', lat:40.7128, lng:-74.0060,  pop:20000000, demand:3, paying:9, region:'northeast', highlights:['HVAC','Cleaning','Moving']},
-  {id:'sanfrancisco',name:'San Francisco',          state:'CA', lat:37.7749, lng:-122.4194, pop:4700000,  demand:2, paying:7, region:'west',      highlights:['Landscaping','Cleaning','HVAC']},
-  {id:'detroit',     name:'Detroit',                state:'MI', lat:42.3314, lng:-83.0458,  pop:4400000,  demand:4, paying:6, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
-  {id:'stlouis',     name:'St. Louis',              state:'MO', lat:38.6270, lng:-90.1994,  pop:2800000,  demand:5, paying:6, region:'midwest',   highlights:['HVAC','Roofing','Pest Control']},
-  {id:'pittsburgh',  name:'Pittsburgh',             state:'PA', lat:40.4406, lng:-79.9959,  pop:2400000,  demand:4, paying:6, region:'northeast', highlights:['HVAC','Roofing','Landscaping']},
-  {id:'memphis',     name:'Memphis',                state:'TN', lat:35.1495, lng:-90.0490,  pop:1300000,  demand:5, paying:5, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
-  {id:'neworleans',  name:'New Orleans',            state:'LA', lat:29.9511, lng:-90.0715,  pop:1270000,  demand:5, paying:5, region:'south',     highlights:['HVAC','Roofing','Foundation Repair']},
-  {id:'birmingham',  name:'Birmingham',             state:'AL', lat:33.5186, lng:-86.8104,  pop:1115000,  demand:5, paying:5, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
-  {id:'omaha',       name:'Omaha',                  state:'NE', lat:41.2565, lng:-95.9345,  pop:970000,   demand:5, paying:6, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
-  {id:'louisville',  name:'Louisville',             state:'KY', lat:38.2527, lng:-85.7585,  pop:1380000,  demand:5, paying:6, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
-  {id:'tulsa',       name:'Tulsa',                  state:'OK', lat:36.1540, lng:-95.9928,  pop:1020000,  demand:5, paying:6, region:'sunbelt',   highlights:['HVAC','Roofing','Landscaping']},
-  {id:'desmoines',   name:'Des Moines',             state:'IA', lat:41.5868, lng:-93.6250,  pop:700000,   demand:5, paying:6, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
-  {id:'albuquerque', name:'Albuquerque',            state:'NM', lat:35.0844, lng:-106.6504, pop:920000,   demand:5, paying:5, region:'sunbelt',   highlights:['HVAC','Landscaping','Pest Control']},
+  {id:'phoenix',     name:'Phoenix',               kwName:'Phoenix AZ',                state:'AZ', lat:33.4484, lng:-112.0740, pop:5000000,  growth:9, income:8, region:'sunbelt',   highlights:['HVAC','Roofing','Pool Service','Pest Control']},
+  {id:'dallas',      name:'Dallas–Fort Worth',     kwName:'Dallas TX',      state:'TX', lat:32.7767, lng:-96.7970,  pop:7700000,  growth:8, income:9, region:'texas',     highlights:['Roofing','HVAC','Landscaping','Moving']},
+  {id:'atlanta',     name:'Atlanta',               kwName:'Atlanta GA',                state:'GA', lat:33.7490, lng:-84.3880,  pop:6200000,  growth:8, income:8, region:'south',     highlights:['HVAC','Roofing','Tree Service']},
+  {id:'houston',     name:'Houston',               kwName:'Houston TX',                state:'TX', lat:29.7604, lng:-95.3698,  pop:7300000,  growth:7, income:8, region:'texas',     highlights:['Roofing','HVAC','Foundation Repair']},
+  {id:'nashville',   name:'Nashville',             kwName:'Nashville TN',              state:'TN', lat:36.1627, lng:-86.7816,  pop:2100000,  growth:8, income:8, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
+  {id:'charlotte',   name:'Charlotte',             kwName:'Charlotte NC',              state:'NC', lat:35.2271, lng:-80.8431,  pop:2700000,  growth:8, income:7, region:'south',     highlights:['HVAC','Roofing','Senior Care']},
+  {id:'tampa',       name:'Tampa–St. Pete',        kwName:'Tampa FL',         state:'FL', lat:27.9506, lng:-82.4572,  pop:3200000,  growth:7, income:8, region:'florida',   highlights:['Roofing','Pool Service','Pest Control']},
+  {id:'denver',      name:'Denver',                kwName:'Denver CO',                 state:'CO', lat:39.7392, lng:-104.9903, pop:2900000,  growth:7, income:8, region:'mountain',  highlights:['Roofing','Landscaping','HVAC']},
+  {id:'orlando',     name:'Orlando',               kwName:'Orlando FL',                state:'FL', lat:28.5383, lng:-81.3792,  pop:2700000,  growth:7, income:7, region:'florida',   highlights:['Pool Service','Roofing','Pest Control']},
+  {id:'austin',      name:'Austin',                kwName:'Austin TX',                 state:'TX', lat:30.2672, lng:-97.7431,  pop:2300000,  growth:8, income:7, region:'texas',     highlights:['HVAC','Landscaping','Cleaning']},
+  {id:'raleigh',     name:'Raleigh–Durham',        kwName:'Raleigh NC',         state:'NC', lat:35.7796, lng:-78.6382,  pop:1400000,  growth:8, income:7, region:'south',     highlights:['HVAC','Roofing','Vet Clinics']},
+  {id:'saltlake',    name:'Salt Lake City',        kwName:'Salt Lake City UT',         state:'UT', lat:40.7608, lng:-111.8910, pop:1250000,  growth:8, income:7, region:'mountain',  highlights:['Roofing','HVAC','Plumbing']},
+  {id:'lasvegas',    name:'Las Vegas',             kwName:'Las Vegas NV',              state:'NV', lat:36.1699, lng:-115.1398, pop:2300000,  growth:7, income:8, region:'sunbelt',   highlights:['HVAC','Pool Service','Auto Repair']},
+  {id:'jacksonville',name:'Jacksonville',          kwName:'Jacksonville FL',           state:'FL', lat:30.3322, lng:-81.6557,  pop:1600000,  growth:7, income:7, region:'florida',   highlights:['Roofing','HVAC','Tree Service']},
+  {id:'capecoral',   name:'Cape Coral–Fort Myers', kwName:'Cape Coral FL',  state:'FL', lat:26.6406, lng:-81.8723,  pop:800000,   growth:7, income:7, region:'florida',   highlights:['Roofing','Pool Service','Senior Care']},
+  {id:'columbus',    name:'Columbus',              kwName:'Columbus OH',               state:'OH', lat:39.9612, lng:-82.9988,  pop:2100000,  growth:6, income:7, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
+  {id:'indianapolis',name:'Indianapolis',          kwName:'Indianapolis IN',           state:'IN', lat:39.7684, lng:-86.1581,  pop:2100000,  growth:6, income:7, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
+  {id:'sanantonio',  name:'San Antonio',           kwName:'San Antonio TX',            state:'TX', lat:29.4241, lng:-98.4936,  pop:2600000,  growth:7, income:6, region:'texas',     highlights:['HVAC','Roofing','Plumbing']},
+  {id:'boise',       name:'Boise',                 kwName:'Boise ID',                  state:'ID', lat:43.6150, lng:-116.2023, pop:780000,   growth:8, income:6, region:'mountain',  highlights:['Roofing','HVAC','Painting']},
+  {id:'huntsville',  name:'Huntsville',            kwName:'Huntsville AL',             state:'AL', lat:34.7304, lng:-86.5861,  pop:480000,   growth:7, income:6, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
+  {id:'greenville',  name:'Greenville',            kwName:'Greenville SC',             state:'SC', lat:34.8526, lng:-82.3940,  pop:930000,   growth:7, income:6, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
+  {id:'coloradosp',  name:'Colorado Springs',      kwName:'Colorado Springs CO',       state:'CO', lat:38.8339, lng:-104.8214, pop:760000,   growth:6, income:7, region:'mountain',  highlights:['Roofing','HVAC','Painting']},
+  {id:'richmond',    name:'Richmond',              kwName:'Richmond VA',               state:'VA', lat:37.5407, lng:-77.4360,  pop:1300000,  growth:6, income:7, region:'south',     highlights:['HVAC','Roofing','Cleaning']},
+  {id:'sarasota',    name:'Sarasota',              kwName:'Sarasota FL',               state:'FL', lat:27.3364, lng:-82.5307,  pop:850000,   growth:6, income:7, region:'florida',   highlights:['Pool Service','Roofing','Senior Care']},
+  {id:'kansascity',  name:'Kansas City',           kwName:'Kansas City MO',            state:'MO', lat:39.0997, lng:-94.5786,  pop:2200000,  growth:5, income:7, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
+  {id:'knoxville',   name:'Knoxville',             kwName:'Knoxville TN',              state:'TN', lat:35.9606, lng:-83.9207,  pop:870000,   growth:6, income:6, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
+  {id:'oklahoma',    name:'Oklahoma City',         kwName:'Oklahoma City OK',          state:'OK', lat:35.4676, lng:-97.5164,  pop:1400000,  growth:6, income:6, region:'sunbelt',   highlights:['HVAC','Roofing','Pest Control']},
+  {id:'tucson',      name:'Tucson',                kwName:'Tucson AZ',                 state:'AZ', lat:32.2226, lng:-110.9747, pop:1050000,  growth:6, income:6, region:'sunbelt',   highlights:['HVAC','Pest Control','Pool Service']},
+  {id:'chicago',     name:'Chicago',               kwName:'Chicago IL',                state:'IL', lat:41.8781, lng:-87.6298,  pop:9500000,  growth:5, income:8, region:'midwest',   highlights:['HVAC','Roofing','Cleaning']},
+  {id:'miami',       name:'Miami–Fort Lauderdale', kwName:'Miami FL', state:'FL', lat:25.7617, lng:-80.1918,  pop:6200000,  growth:6, income:7, region:'florida',   highlights:['Pool Service','Roofing','Pest Control']},
+  {id:'dc',          name:'Washington',            kwName:'Washington DC',             state:'DC', lat:38.9072, lng:-77.0369,  pop:6400000,  growth:4, income:8, region:'northeast', highlights:['HVAC','Landscaping','Senior Care']},
+  {id:'boston',      name:'Boston',                kwName:'Boston MA',                 state:'MA', lat:42.3601, lng:-71.0589,  pop:4900000,  growth:4, income:8, region:'northeast', highlights:['HVAC','Roofing','Cleaning']},
+  {id:'minneapolis', name:'Minneapolis–St. Paul',  kwName:'Minneapolis MN',   state:'MN', lat:44.9778, lng:-93.2650,  pop:3700000,  growth:5, income:7, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
+  {id:'philadelphia',name:'Philadelphia',          kwName:'Philadelphia PA',           state:'PA', lat:39.9526, lng:-75.1652,  pop:6200000,  growth:4, income:7, region:'northeast', highlights:['HVAC','Roofing','Cleaning']},
+  {id:'seattle',     name:'Seattle',               kwName:'Seattle WA',                state:'WA', lat:47.6062, lng:-122.3321, pop:4000000,  growth:4, income:7, region:'west',      highlights:['Roofing','Landscaping','HVAC']},
+  {id:'sandiego',    name:'San Diego',             kwName:'San Diego CA',              state:'CA', lat:32.7157, lng:-117.1611, pop:3300000,  growth:4, income:7, region:'west',      highlights:['HVAC','Pool Service','Pest Control']},
+  {id:'losangeles',  name:'Los Angeles',           kwName:'Los Angeles CA',            state:'CA', lat:34.0522, lng:-118.2437, pop:13200000, growth:3, income:8, region:'west',      highlights:['Pool Service','Cleaning','HVAC']},
+  {id:'newyork',     name:'New York',              kwName:'New York NY',               state:'NY', lat:40.7128, lng:-74.0060,  pop:20000000, growth:3, income:9, region:'northeast', highlights:['HVAC','Cleaning','Moving']},
+  {id:'sanfrancisco',name:'San Francisco',         kwName:'San Francisco CA',          state:'CA', lat:37.7749, lng:-122.4194, pop:4700000,  growth:2, income:7, region:'west',      highlights:['Landscaping','Cleaning','HVAC']},
+  {id:'detroit',     name:'Detroit',               kwName:'Detroit MI',                state:'MI', lat:42.3314, lng:-83.0458,  pop:4400000,  growth:4, income:6, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
+  {id:'stlouis',     name:'St. Louis',             kwName:'St Louis MO',              state:'MO', lat:38.6270, lng:-90.1994,  pop:2800000,  growth:5, income:6, region:'midwest',   highlights:['HVAC','Roofing','Pest Control']},
+  {id:'pittsburgh',  name:'Pittsburgh',            kwName:'Pittsburgh PA',             state:'PA', lat:40.4406, lng:-79.9959,  pop:2400000,  growth:4, income:6, region:'northeast', highlights:['HVAC','Roofing','Landscaping']},
+  {id:'memphis',     name:'Memphis',               kwName:'Memphis TN',                state:'TN', lat:35.1495, lng:-90.0490,  pop:1300000,  growth:5, income:5, region:'south',     highlights:['HVAC','Roofing','Pest Control']},
+  {id:'neworleans',  name:'New Orleans',           kwName:'New Orleans LA',            state:'LA', lat:29.9511, lng:-90.0715,  pop:1270000,  growth:5, income:5, region:'south',     highlights:['HVAC','Roofing','Foundation Repair']},
+  {id:'birmingham',  name:'Birmingham',            kwName:'Birmingham AL',             state:'AL', lat:33.5186, lng:-86.8104,  pop:1115000,  growth:5, income:5, region:'south',     highlights:['HVAC','Roofing','Landscaping']},
+  {id:'omaha',       name:'Omaha',                 kwName:'Omaha NE',                  state:'NE', lat:41.2565, lng:-95.9345,  pop:970000,   growth:5, income:6, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
+  {id:'louisville',  name:'Louisville',            kwName:'Louisville KY',             state:'KY', lat:38.2527, lng:-85.7585,  pop:1380000,  growth:5, income:6, region:'midwest',   highlights:['HVAC','Roofing','Landscaping']},
+  {id:'tulsa',       name:'Tulsa',                 kwName:'Tulsa OK',                  state:'OK', lat:36.1540, lng:-95.9928,  pop:1020000,  growth:5, income:6, region:'sunbelt',   highlights:['HVAC','Roofing','Landscaping']},
+  {id:'desmoines',   name:'Des Moines',            kwName:'Des Moines IA',             state:'IA', lat:41.5868, lng:-93.6250,  pop:700000,   growth:5, income:6, region:'midwest',   highlights:['HVAC','Roofing','Gutters']},
+  {id:'albuquerque', name:'Albuquerque',           kwName:'Albuquerque NM',            state:'NM', lat:35.0844, lng:-106.6504, pop:920000,   growth:5, income:5, region:'sunbelt',   highlights:['HVAC','Landscaping','Pest Control']},
 ];
 
 window.NICHE_CATS = [
@@ -115,7 +115,7 @@ window.NICHE_CATS = [
 window.MIutil = {
   quadrant(d, p) {
     if (d >= 7 && p >= 7) return { key:'sweet',  color:'#2f8f6a', label:'Sweet Spot' };
-    if (d >= 7 && p <  7) return { key:'demand', color:'#3a6b8f', label:'Demand Rich' };
+    if (d >= 7 && p <  7) return { key:'growth', color:'#3a6b8f', label:'Growth Market' };
     if (d <  7 && p >= 7) return { key:'comp',   color:'#b08a3e', label:'Competitive' };
     return { key:'watch', color:'#888a90', label:'Watch List' };
   },
@@ -131,17 +131,28 @@ window.MIutil = {
     return { x, y: yLin };
   },
   niches() { return window.NICHE_CATS.flatMap(c => c.niches.map(n => ({ ...n, cat: c }))); },
-  isStrong(niche, metro) { return niche.regions.includes('everywhere') || niche.regions.includes(metro.region); },
+  isStrong(niche, metro) {
+    if (niche.regions.includes('everywhere')) return true;
+    const r = metro.region;
+    if (niche.regions.includes(r)) return true;
+    // City-region aliases → niche region equivalents
+    const aliases = { texas:'sunbelt', florida:'sunbelt', northeast:'north' };
+    return !!(aliases[r] && niche.regions.includes(aliases[r]));
+  },
+  kwName(metro) {
+    // Returns a clean ASCII geo string safe for keyword database queries
+    return metro.kwName || (metro.name + ' ' + metro.state);
+  },
   comboScore(metro, niche) {
-    const market = (metro.demand + metro.paying) / 2;
-    const strong = (niche.regions.includes('everywhere') || niche.regions.includes(metro.region)) && metro.demand >= 6;
+    const market = (metro.growth + metro.income) / 2;
+    const strong = (niche.regions.includes('everywhere') || niche.regions.includes(metro.region)) && metro.growth >= 6;
     return parseFloat((market * (strong ? 1.0 : 0.6)).toFixed(2));
   },
   buildCombos() {
     const out = [];
     window.METROS.forEach(m => window.NICHE_CATS.forEach(cat => cat.niches.forEach(n => {
       const score = this.comboScore(m, n);
-      const strong = this.isStrong(n, m) && m.demand >= 6;
+      const strong = this.isStrong(n, m) && m.growth >= 6;
       out.push({ metro: m, cat, niche: n, score, strong });
     })));
     return out.sort((a,b) => b.score - a.score);
@@ -150,17 +161,17 @@ window.MIutil = {
 
 // ─── Mock deep-analysis payload ────────────────────────────
 window.mockAnalysis = function(metro, niche) {
-  const market = (metro.demand + metro.paying) / 2;
-  const strong = window.MIutil.isStrong(niche, metro) && metro.demand >= 6;
+  const market = (metro.growth + metro.income) / 2;
+  const strong = window.MIutil.isStrong(niche, metro) && metro.growth >= 6;
   const baseScore = market * (strong ? 1.0 : 0.7);
   // four-phase
   const phases = {
     geo:    Math.min(10, Math.round(baseScore + (metro.pop > 2000000 ? 0.6 : 0))),
-    demand: Math.min(10, Math.round(metro.demand + (strong ? 1 : -1))),
-    comp:   Math.min(10, Math.round(metro.paying + (metro.demand > 7 ? 0 : -1))),
+    growth: Math.min(10, Math.round(metro.growth + (strong ? 1 : -1))),
+    comp:   Math.min(10, Math.round(metro.income + (metro.growth > 7 ? 0 : -1))),
     opp:    Math.min(10, Math.round(baseScore + (strong ? 0.4 : -0.7))),
   };
-  const wt = (phases.geo*0.2 + phases.demand*0.3 + phases.comp*0.25 + phases.opp*0.25).toFixed(2);
+  const wt = (phases.geo*0.2 + phases.growth*0.3 + phases.comp*0.25 + phases.opp*0.25).toFixed(2);
   const dec = wt >= 8 ? 'strong_go' : wt >= 6 ? 'conditional_go' : wt >= 4 ? 'hold' : 'no_go';
   return {
     metro, niche,
@@ -182,13 +193,13 @@ window.mockAnalysis = function(metro, niche) {
     ltv: strong ? `$${(3.2 + Math.random()*4.5).toFixed(1)}k` : `$${(1.8 + Math.random()*2).toFixed(1)}k`,
     receptivity: strong ? 'High' : 'Medium',
     summary: strong
-      ? `${metro.name} has the rare combination of underserved buyers (${metro.demand}/10) and high willingness-to-pay (${metro.paying}/10). The SERP is dominated by aggregators with average Domain Rank ${18 + Math.floor(Math.random()*10)} — a focused content + local-citation play should clear the top three positions inside one quarter. ${niche.name} services align with the region's economic drivers and inbound migration is sustaining demand. Recommended opening rental ${niche.rental}/mo with one anchor client, expand to a two-client rotation by month four.`
-      : `${metro.name} is a mature ${niche.name.toLowerCase()} market with established lead-buying infrastructure but lower underserved demand (${metro.demand}/10). SERP shows entrenched domains and possible rank-rent competitors already operating. Worth monitoring but not the first move — revisit if demand signals improve or a directly competing aggregator weakens.`,
+      ? `${metro.name} has the rare combination of underserved buyers (${metro.growth}/10) and high willingness-to-pay (${metro.income}/10). The SERP is dominated by aggregators with average Domain Rank ${18 + Math.floor(Math.random()*10)} — a focused content + local-citation play should clear the top three positions inside one quarter. ${niche.name} services align with the region's economic drivers and inbound migration is sustaining growth. Recommended opening rental ${niche.rental}/mo with one anchor client, expand to a two-client rotation by month four.`
+      : `${metro.name} is a mature ${niche.name.toLowerCase()} market with established lead-buying infrastructure but lower underserved growth (${metro.growth}/10). SERP shows entrenched domains and possible rank-rent competitors already operating. Worth monitoring but not the first move — revisit if growth signals improve or a directly competing aggregator weakens.`,
     strongest_signal: strong
       ? `Top 3 SERP positions held by aggregators with Domain Rank under 25 — directly beatable.`
-      : `Stable demand baseline with mature lead-buying market — durable if entered.`,
+      : `Stable growth baseline with mature lead-buying market — durable if entered.`,
     biggest_risk: strong
-      ? `Seasonal demand curve concentrates revenue in Q2–Q3; off-season cashflow needs planning.`
+      ? `Seasonal growth curve concentrates revenue in Q2–Q3; off-season cashflow needs planning.`
       : `Established competitors have 3+ years of local backlinks and brand search.`,
     first_action: strong
       ? `Register domain matching primary query, publish 12 cornerstone pages targeting metro + service modifiers within 30 days.`
