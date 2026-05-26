@@ -156,7 +156,7 @@ function useAtlasMap(containerId, { selected, setSelected, nicheFilters, quadran
         `<b style="font-family:${atlasTokens.display};font-size:14px;color:${atlasTokens.ink}">${m.name}, ${m.state}</b><br><span style="font-family:${atlasTokens.mono};font-size:10px;color:${atlasTokens.muted}">Demand ${m.growth} · Paying ${m.income} · ${q.label}</span>`,
         { className: 'atlas-tip', direction: 'top', offset: [0, -6] }
       );
-      markersRef.current[m.id] = { marker, color, radius, metro: m };
+      markersRef.current[m.id] = { marker, color, radius: marker.options.radius, metro: m };
     });
 
     setTimeout(() => map.invalidateSize(), 80);
@@ -190,7 +190,7 @@ function useAtlasMap(containerId, { selected, setSelected, nicheFilters, quadran
         { className: 'metro-tooltip', direction: 'top', offset: [0,-4] }
       );
       mk.on('click', () => setSelected(city.id));
-      cityMarkersRef[city.id] = { marker: mk, city };
+      cityMarkersRef[city.id] = { marker: mk, city, color: col, radius: r };
       } catch(e) { console.warn('City marker error:', city?.name, e.message); }
     });
 
@@ -225,15 +225,19 @@ function useAtlasMap(containerId, { selected, setSelected, nicheFilters, quadran
         return true;
       }
 
-      // Metro markers
-      Object.values(markersRef.current || {}).forEach(({ marker, metro }) => {
+      // Metro markers — on=original color, off=faded gray
+      Object.values(markersRef.current || {}).forEach(({ marker, metro, color }) => {
         const on = visibility(metro);
-        marker.setStyle({ fillOpacity: on ? 0.78 : 0.07, opacity: on ? 1 : 0.07 });
+        marker.setStyle(on
+          ? { fillColor: color, fillOpacity: 0.82, color: color,     opacity: 1    }
+          : { fillColor: '#9a9a9a', fillOpacity: 0.12, color: '#bbb', opacity: 0.15 });
       });
-      // City markers
-      Object.values(cityMarkersRef).forEach(({ marker, city }) => {
+      // City markers — on=original color, off=faded gray
+      Object.values(window._atlasCityMarkers || {}).forEach(({ marker, city, color }) => {
         const on = visibility(city);
-        marker.setStyle({ fillOpacity: on ? 0.70 : 0.07, opacity: on ? 0.45 : 0.07 });
+        marker.setStyle(on
+          ? { fillColor: color, fillOpacity: 0.70, color: color,     opacity: 0.45 }
+          : { fillColor: '#9a9a9a', fillOpacity: 0.10, color: '#bbb', opacity: 0.12 });
       });
     };
 
@@ -454,9 +458,20 @@ function AtlasNichePanel({ nicheFilters, setNicheFilter, clearAllFilters, pickNi
 }
 
 // ─── Coach hint card (when nothing selected) ───────────────
-function AtlasCoachHint({ topCombo, onAnalyze, allCombos, onSelectMetro, pickNiche }) {
+function AtlasCoachHint({ topCombo, onAnalyze, allCombos, filteredRows, onSelectMetro, pickNiche }) {
   const { metro, niche, score } = topCombo;
-  const runnerUps = (allCombos || []).slice(1, 4);
+  // Runner-ups: best niche for each of the next 3 rows in the filtered viewport
+  const runnerUps = React.useMemo(() => {
+    const rows = (filteredRows || []).slice(1, 4);
+    return rows.map(r => {
+      const entity = r.metro;
+      const niches = (window.NICHE_CATS||[]).flatMap(cat => cat.niches.map(n => ({
+        metro: entity, niche: n, cat, score: window.MIutil.comboScore(entity, n),
+      })));
+      niches.sort((a,b) => b.score - a.score);
+      return niches[0];
+    }).filter(Boolean);
+  }, [filteredRows]);
   return (
     <div style={{ display:'flex', flexDirection:'column', gap:14 }}>
       <div style={{
@@ -474,10 +489,18 @@ function AtlasCoachHint({ topCombo, onAnalyze, allCombos, onSelectMetro, pickNic
           Sweet-spot metro with underserved growth and high willingness-to-pay. Regional fit for {niche.name.toLowerCase()}, and live SERP shows beatable positions. Weighted score <span style={{ color:atlasTokens.accent, fontFamily:atlasTokens.mono, fontWeight:500 }}>{score.toFixed(1)}</span> — the strongest combination on the board.
         </div>
         <div style={{ display:'flex', gap:18, marginBottom:16, paddingBottom:16, borderBottom:`1px solid ${atlasTokens.rule}` }}>
-          <AtlasMicroStat label="Growth"  v={`${metro.growth}/10`} c={atlasTokens.sweet} />
-          <AtlasMicroStat label="Income"  v={`${metro.income}/10`} c={atlasTokens.sweet} />
+          <AtlasMicroStat label="Growth"
+            v={metro.growth_pct_3yr != null
+              ? `${metro.growth_pct_3yr > 0 ? '+' : ''}${metro.growth_pct_3yr.toFixed(1)}%`
+              : `${metro.growth}/10`}
+            c={atlasTokens.sweet} />
+          <AtlasMicroStat label="Income"
+            v={metro.census_income
+              ? `$${Math.round(metro.census_income/1000)}k`
+              : `${metro.income}/10`}
+            c={atlasTokens.sweet} />
           <AtlasMicroStat label="Rental"  v={niche.rental} />
-          <AtlasMicroStat label="Pop."    v={`${(metro.pop/1000000).toFixed(1)}M`} />
+          <AtlasMicroStat label="Pop."    v={(metro.pop||0)>=1000000?`${(metro.pop/1000000).toFixed(1)}M`:Math.round((metro.pop||0)/1000)+'k'} />
         </div>
         <button onClick={onAnalyze} style={{
           width:'100%', padding:'11px 14px', borderRadius:6,
@@ -769,6 +792,7 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
         case 'score':  av=a.score; bv=b.score; break;
         case 'metro':  av=a.metro.name; bv=b.metro.name; break;
         case 'growth': av=a.metro.growth; bv=b.metro.growth; break;
+        case 'income': av=a.metro.income; bv=b.metro.income; break;
         case 'fit':    av=QUAD_RANK[a.q.key]; bv=QUAD_RANK[b.q.key]; break;
         default: av=a.score; bv=b.score;
       }
@@ -873,8 +897,8 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
             <tr>
               <Th k="score" w={56}>#</Th>
               <Th k="metro">Metro</Th>
-              <Th k="growth" w={96} align="right">Demand</Th>
-              <Th k="fit" w={140}>Fit</Th>
+              <Th k="growth" w={96} align="right">Growth</Th>
+              <Th k="income" w={140}>Income</Th>
               <Th k="score" w={120} align="right">Score</Th>
             </tr>
           </thead>
@@ -913,15 +937,24 @@ function AtlasTable({ rows, selected, includeNiches = [], excludeNiches = [], qu
                     </div>
                   </td>
                   <td style={{ padding:'10px 16px' }}>
-                    <span style={{
-                      fontFamily:atlasTokens.mono, fontSize:10, padding:'3px 9px', borderRadius:10,
-                      background:`${qc}18`, border:`1px solid ${qc}55`, color:qc,
-                      display:'inline-flex', alignItems:'center', gap:5,
-                      letterSpacing:0.3,
+                    {/* Income: bar + score + quadrant badge */}
+                    <div style={{ display:'flex', alignItems:'center', gap:8 }}>
+                      <div style={{ display:'inline-flex', alignItems:'center', gap:5 }}>
+                        <div style={{ width:32, height:3, background:atlasTokens.rule, borderRadius:2, overflow:'hidden' }}>
+                          <div style={{ width:`${r.metro.income*10}%`, height:'100%', background:qc }} />
+                        </div>
+                        <span style={{ fontFamily:atlasTokens.mono, fontSize:12, color:qc, width:14, textAlign:'right' }}>{r.metro.income}</span>
+                      </div>
+                      <span style={{
+                        fontFamily:atlasTokens.mono, fontSize:10, padding:'3px 9px', borderRadius:10,
+                        background:`${qc}18`, border:`1px solid ${qc}55`, color:qc,
+                        display:'inline-flex', alignItems:'center', gap:5,
+                        letterSpacing:0.3,
                     }}>
                       <span style={{ width:5, height:5, borderRadius:'50%', background:qc }} />
                       {r.q.label}
                     </span>
+                    </div>
                   </td>
                   <td style={{ padding:'10px 16px', textAlign:'right' }}>
                     <div style={{ display:'inline-flex', alignItems:'baseline', gap:6, justifyContent:'flex-end' }}>
@@ -1616,7 +1649,21 @@ function AtlasApp() {
   }, [allMetroRows, allCityRows, minPopFilter, maxPopFilter, viewportIds,
       includeNiches, excludeNiches, quadrantFilters, anyQuad]);
 
-  const topCombo = allCombos[0];
+  // Analyst's pick: best opportunity in current viewport (respects all filters)
+  const topCombo = React.useMemo(() => {
+    const rows = filteredMetroRows.filter(r => !selected || r.metro.id !== selected);
+    const topRow = rows[0];
+    if (!topRow) return allCombos[0];
+    const entity = topRow.metro;
+    // Find best niche for this entity using comboScore
+    const niches = (window.NICHE_CATS||[]).flatMap(cat => cat.niches.map(n => ({
+      metro: entity, niche: n, cat,
+      score: window.MIutil.comboScore(entity, n),
+      strong: window.MIutil.isStrong(n, entity) && entity.growth >= 6,
+    })));
+    niches.sort((a,b) => b.score - a.score);
+    return niches[0] || allCombos[0];
+  }, [filteredMetroRows, allCombos, selected]);
   const selectedMetro = selected
     ? (window.METROS.find(m => m.id === selected) || (window.CITIES||[]).find(c => c.id === selected))
     : null;
@@ -1927,6 +1974,7 @@ function AtlasApp() {
             : <AtlasCoachHint
                 topCombo={topCombo}
                 allCombos={allCombos}
+                filteredRows={filteredMetroRows}
                 onAnalyze={() => openAnalysis(topCombo.metro, topCombo.niche)}
                 onSelectMetro={setSelected}
                 pickNiche={pickNiche}
